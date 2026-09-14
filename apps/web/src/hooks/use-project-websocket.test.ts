@@ -47,4 +47,25 @@ describe("getWsUrl", () => {
       "ws://localhost:1337/api/ws/a%20b%2Fc%3Fd?windowId=test-window-id",
     );
   });
+
+  it("uses VITE_WS_URL verbatim with a query-based projectId when set", () => {
+    vi.stubEnv("VITE_WS_URL", "https://hstd.example.com/ws");
+    expect(getWsUrl("p1")).toBe(
+      "wss://hstd.example.com/ws?kaneo=project&projectId=p1&windowId=test-window-id",
+    );
+  });
+
+  it("trims trailing slashes from a VITE_WS_URL override", () => {
+    vi.stubEnv("VITE_WS_URL", "https://hstd.example.com/ws///");
+    expect(getWsUrl("p1")).toBe(
+      "wss://hstd.example.com/ws?kaneo=project&projectId=p1&windowId=test-window-id",
+    );
+  });
+
+  it("URL-encodes the projectId in the query-based override too", () => {
+    vi.stubEnv("VITE_WS_URL", "https://hstd.example.com/ws");
+    expect(getWsUrl("a b/c?d")).toBe(
+      "wss://hstd.example.com/ws?kaneo=project&projectId=a%20b%2Fc%3Fd&windowId=test-window-id",
+    );
+  });
 });

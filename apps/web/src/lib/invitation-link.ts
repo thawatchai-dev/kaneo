@@ -8,9 +8,11 @@
  *
  * The `origin` parameter exists so this stays testable without a DOM.
  */
+import { withBasePath } from "@/lib/base-path";
+
 export function buildInvitationLink(
   invitationId: string,
   origin: string = window.location.origin,
 ): string {
-  return `${origin.replace(/\/+$/, "")}/invitation/accept/${invitationId}`;
+  return `${origin.replace(/\/+$/, "")}${withBasePath(`invitation/accept/${invitationId}`)}`;
 }

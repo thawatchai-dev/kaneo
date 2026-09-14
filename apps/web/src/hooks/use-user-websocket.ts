@@ -1,14 +1,9 @@
-import { windowId } from "@kaneo/libs";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { getApiUrl } from "@/fetchers/get-api-url";
+import { getUserWsUrl } from "@/fetchers/get-ws-url";
 import { authClient } from "@/lib/auth-client";
 
-export function getUserWsUrl() {
-  const base = getApiUrl("ws");
-  const wsBase = base.replace(/^http/, "ws");
-  return `${wsBase}/user?windowId=${encodeURIComponent(windowId)}`;
-}
+export { getUserWsUrl } from "@/fetchers/get-ws-url";
 
 const MAX_RETRIES = 5;
 const BASE_DELAY = 1000;

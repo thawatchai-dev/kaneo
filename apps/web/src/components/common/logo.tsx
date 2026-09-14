@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { withBasePath } from "@/lib/base-path";
 import useProjectStore from "@/store/project";
 
 type LogoProps = {
@@ -17,12 +18,12 @@ export function Logo({ className = "" }: LogoProps) {
       className={`w-auto ${className}`}
     >
       <img
-        src="/logo-dark.svg"
+        src={withBasePath("logo-dark.svg")}
         alt="Kaneo"
         className="h-6 w-auto dark:hidden"
       />
       <img
-        src="/logo-light.svg"
+        src={withBasePath("logo-light.svg")}
         alt="Kaneo"
         className="hidden h-6 w-auto dark:block"
       />

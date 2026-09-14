@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import queryClient from "@/query-client";
 import "@/index.css";
 import { useAuth } from "@/components/providers/auth-provider/hooks/use-auth";
+import { patchHistoryForBasePath } from "@/lib/base-path";
 import { KeyboardShortcutsHelp } from "./components/keyboard-shortcuts-help";
 import AuthProvider from "./components/providers/auth-provider";
 import { ThemeProvider } from "./components/providers/theme-provider";
@@ -44,6 +45,7 @@ console.log(`
 
 const router = createRouter({
   routeTree,
+  basepath: "/kaneo",
   defaultPreload: "intent",
   defaultPreloadStaleTime: 0,
   context: {
@@ -51,6 +53,10 @@ const router = createRouter({
     queryClient,
   },
 });
+
+// Makes any raw `router.history.push/replace("/literal/path")` call
+// base-path-aware app-wide — see patchHistoryForBasePath's doc comment.
+patchHistoryForBasePath(router.history);
 
 function App() {
   const { user } = useAuth();

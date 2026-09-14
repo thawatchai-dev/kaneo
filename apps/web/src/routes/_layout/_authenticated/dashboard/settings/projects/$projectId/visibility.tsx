@@ -12,6 +12,7 @@ import useUpdateProject from "@/hooks/mutations/project/use-update-project";
 import useGetProject from "@/hooks/queries/project/use-get-project";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
+import { withBasePath } from "@/lib/base-path";
 import { toast } from "@/lib/toast";
 
 export const Route = createFileRoute(
@@ -83,7 +84,9 @@ function RouteComponent() {
 
   const origin = window.location.origin;
 
-  const publicUrl = project?.id ? `${origin}/public-project/${project.id}` : "";
+  const publicUrl = project?.id
+    ? `${origin}${withBasePath(`public-project/${project.id}`)}`
+    : "";
 
   return (
     <>

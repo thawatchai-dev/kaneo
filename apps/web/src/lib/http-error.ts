@@ -1,3 +1,5 @@
+import { stripBasePath, withBasePath } from "@/lib/base-path";
+
 export class HttpError extends Error {
   status: number;
 
@@ -17,10 +19,15 @@ export function isUnauthorizedError(error: unknown): boolean {
 // current pathname/search/hash so the sign-in page can return the user to
 // where they were instead of dropping them on /dashboard.
 export function handleUnauthorized(): void {
-  const currentPath =
-    window.location.pathname + window.location.search + window.location.hash;
+  // window.location.pathname carries the base path (unlike TanStack
+  // Router's own parsed location); strip it so `redirect` is always
+  // app-relative, matching what the sign-in page hands to `navigate({ to })`.
+  const currentPath = stripBasePath(
+    window.location.pathname + window.location.search + window.location.hash,
+  );
+  const signInPath = withBasePath("auth/sign-in");
   const target = currentPath
-    ? `/auth/sign-in?redirect=${encodeURIComponent(currentPath)}`
-    : "/auth/sign-in";
+    ? `${signInPath}?redirect=${encodeURIComponent(currentPath)}`
+    : signInPath;
   window.location.replace(target);
 }

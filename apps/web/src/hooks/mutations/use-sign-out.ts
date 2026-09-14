@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { getIdToken } from "@/fetchers/oauth/get-id-token";
 import { authClient } from "@/lib/auth-client";
+import { withBasePath } from "@/lib/base-path";
 
 function useSignOut(idpLogoutUrl?: string | null) {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ function useSignOut(idpLogoutUrl?: string | null) {
         fetchOptions: {
           onSuccess: () => {
             if (idpLogoutUrl) {
-              const redirectUri = `${window.location.origin}/auth/sign-in`;
+              const redirectUri = `${window.location.origin}${withBasePath("auth/sign-in")}`;
               const url = new URL(idpLogoutUrl);
               url.searchParams.set("post_logout_redirect_uri", redirectUri);
               if (idToken) {

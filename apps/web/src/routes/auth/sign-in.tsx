@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import useGetConfig from "@/hooks/queries/config/use-get-config";
 import useInstanceStatus from "@/hooks/queries/instance/use-instance-status";
 import { authClient } from "@/lib/auth-client";
+import { stripBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/cn";
 import { toast } from "@/lib/toast";
 import { AuthLayout } from "../../components/auth/layout";
@@ -94,7 +95,11 @@ function SignIn() {
   const getSafeRedirectPath = useCallback(() => {
     const redirectPath = search.redirect;
     if (redirectPath?.startsWith("/") && !redirectPath.includes("//")) {
-      return redirectPath;
+      // Some callers (e.g. handleUnauthorized) write app-relative values;
+      // others may still carry the deployment base path. Strip it so
+      // navigate({ to }) — which always re-applies basepath and isn't
+      // idempotent about it — can't double-prefix (e.g. "/kaneo/kaneo/...").
+      return stripBasePath(redirectPath);
     }
     return undefined;
   }, [search.redirect]);

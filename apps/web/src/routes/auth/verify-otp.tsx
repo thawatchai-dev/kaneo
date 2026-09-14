@@ -23,6 +23,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { authClient } from "@/lib/auth-client";
+import { stripBasePath } from "@/lib/base-path";
 import { toast } from "@/lib/toast";
 import { AuthLayout } from "../../components/auth/layout";
 
@@ -60,7 +61,10 @@ function VerifyOtp() {
 
   const safeRedirect = useMemo(() => {
     if (redirect?.startsWith("/") && !redirect.includes("//")) {
-      return redirect;
+      // Keep this app-relative (see stripBasePath's doc comment) so it
+      // stays safe to hand to navigate({ to }) even if a future change
+      // swaps the history.push below for that.
+      return stripBasePath(redirect);
     }
     return undefined;
   }, [redirect]);

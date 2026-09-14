@@ -26,6 +26,7 @@ import useGetProject from "@/hooks/queries/project/use-get-project";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useGetTask from "@/hooks/queries/task/use-get-task";
 import { useGetActiveWorkspaceUsers } from "@/hooks/queries/workspace-users/use-get-active-workspace-users";
+import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/cn";
 import { getColumnIcon } from "@/lib/column";
 import {
@@ -119,7 +120,7 @@ export default function TaskPropertiesSidebar({
 
   const handleCopyTaskLink = () => {
     navigator.clipboard.writeText(
-      `${window.location.origin}/dashboard/workspace/${workspaceId}/project/${projectId}/task/${taskId}`,
+      `${window.location.origin}${withBasePath(`dashboard/workspace/${workspaceId}/project/${projectId}/task/${taskId}`)}`,
     );
     toast.message(t("tasks:properties.copyTaskLink"));
   };

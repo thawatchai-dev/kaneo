@@ -59,6 +59,7 @@ import useReorderProjects from "@/hooks/mutations/project/use-reorder-projects";
 import useGetProjects from "@/hooks/queries/project/use-get-projects";
 import useActiveWorkspace from "@/hooks/queries/workspace/use-active-workspace";
 import { useWorkspacePermission } from "@/hooks/use-workspace-permission";
+import { withBasePath } from "@/lib/base-path";
 import { toast } from "@/lib/toast";
 import type { ProjectWithTasks } from "@/types/project";
 import CreateProjectModal from "./shared/modals/create-project-modal";
@@ -295,7 +296,7 @@ export function NavProjects() {
                                 className="h-7 items-start cursor-pointer text-sm"
                                 onClick={() => {
                                   navigator.clipboard.writeText(
-                                    `${window.location.origin}/dashboard/workspace/${workspace?.id}/project/${project.id}`,
+                                    `${window.location.origin}${withBasePath(`dashboard/workspace/${workspace?.id}/project/${project.id}`)}`,
                                   );
                                   toast.success(
                                     t("navigation:projectList.linkCopied"),
