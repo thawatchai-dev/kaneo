@@ -40,6 +40,7 @@ type StorageConfig = {
   accessKeyId: string;
   secretAccessKey: string;
   publicBaseUrl?: string;
+  publicUploadUrl?: string;
   keyPrefix: string;
   forcePathStyle: boolean;
   maxImageUploadBytes: number;
@@ -146,6 +147,7 @@ function getStorageConfig(): StorageConfig {
     accessKeyId,
     secretAccessKey,
     publicBaseUrl: env("S3_PUBLIC_BASE_URL") || undefined,
+    publicUploadUrl: env("S3_PUBLIC_UPLOAD_URL") || undefined,
     keyPrefix: env("S3_KEY_PREFIX"),
     forcePathStyle: parseBoolean(process.env.S3_FORCE_PATH_STYLE, true),
     maxImageUploadBytes: parsePositiveInt(
@@ -265,6 +267,22 @@ export function applyKeyPrefix(prefix: string, key: string) {
   return `${trimmed}/${key}`;
 }
 
+/**
+ * Fork patch (see SUBPATH.md): lets the browser reach MinIO through a path
+ * prefix on the Kaneo domain (e.g. `https://host/s3`) that the reverse proxy
+ * strips before forwarding with `Host` set back to the `S3_ENDPOINT` host.
+ * The URL is signed against `S3_ENDPOINT`, so only the origin is swapped here;
+ * path and signature query are kept verbatim so MinIO sees what was signed.
+ */
+export function toPublicUploadUrl(
+  signedUrl: string,
+  publicUploadUrl: string | undefined,
+) {
+  if (!publicUploadUrl) return signedUrl;
+  const signed = new URL(signedUrl);
+  return `${publicUploadUrl.replace(/\/+$/, "")}${signed.pathname}${signed.search}`;
+}
+
 export function validateTaskAssetUploadInput(
   contentType: string,
   size: number,
@@ -300,9 +318,10 @@ export async function createTaskImageUploadUrl(
     ContentType: context.contentType,
   });
 
-  const uploadUrl = await getSignedUrl(client, command, {
+  const signedUrl = await getSignedUrl(client, command, {
     expiresIn: config.presignTtlSeconds,
   });
+  const uploadUrl = toPublicUploadUrl(signedUrl, config.publicUploadUrl);
 
   return {
     key,

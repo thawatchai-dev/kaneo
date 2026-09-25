@@ -215,6 +215,49 @@ common case (WebSocket traffic reachable on the same `/kaneo` prefix as
 everything else); `apps/web/env.sh` strips the unset placeholder so a
 deployment that doesn't set it is unaffected.
 
+## Object storage (MinIO) under a path prefix
+
+Uploads use presigned URLs: the API signs a `PUT` against `S3_ENDPOINT`
+and the browser sends the file straight there. The signature covers the
+`Host` header and the path, so MinIO must receive exactly what was
+signed. MinIO can't be served under a path itself, and a signed URL
+pointing at `https://yourdomain.com/s3/...` would never match what
+MinIO sees after the proxy strips `/s3`.
+
+So the API signs against the internal endpoint and only the origin of
+the returned URL is swapped (`toPublicUploadUrl()` in
+`apps/api/src/storage/s3.ts`, driven by the fork-only
+`S3_PUBLIC_UPLOAD_URL`). The outer nginx then undoes the swap: strip
+`/s3` and set `Host` back to the `S3_ENDPOINT` host, port included.
+
+```
+S3_ENDPOINT=http://minio-prod:9006
+S3_PUBLIC_UPLOAD_URL=https://yourdomain.com/s3
+S3_BUCKET=kaneo-uploads
+S3_ACCESS_KEY_ID=kaneo
+S3_SECRET_ACCESS_KEY=...
+S3_REGION=us-east-1
+S3_FORCE_PATH_STYLE=true
+```
+
+```nginx
+location /s3/ {
+    proxy_pass http://127.0.0.1:9006/;
+    proxy_set_header Host minio-prod:9006;   # must equal S3_ENDPOINT's host:port
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_request_buffering off;
+    client_max_body_size 100M;
+}
+```
+
+`S3_ENDPOINT` must also be reachable from the API container, because the
+API reads and deletes objects through it. If `minio-prod` doesn't resolve
+there, use the IP and change the nginx `Host` to match. No CORS is needed:
+`/s3/` is the same origin as Kaneo. Unset `S3_PUBLIC_UPLOAD_URL` and
+upstream behaviour is unchanged.
+
 ## Upgrading to a new upstream kaneo version
 
 See **[UPGRADE.md](./UPGRADE.md)** for the step-by-step runbook (merge,

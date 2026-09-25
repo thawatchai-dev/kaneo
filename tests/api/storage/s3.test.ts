@@ -12,6 +12,7 @@ import {
   parsePositiveInt,
   resolveS3Credentials,
   sanitizePathSegment,
+  toPublicUploadUrl,
   validateTaskAssetUploadInput,
 } from "../../../apps/api/src/storage/s3";
 
@@ -24,6 +25,7 @@ describe("S3 helpers", () => {
   const originalRegion = process.env.S3_REGION;
   const originalPathStyle = process.env.S3_FORCE_PATH_STYLE;
   const originalKeyPrefix = process.env.S3_KEY_PREFIX;
+  const originalPublicUploadUrl = process.env.S3_PUBLIC_UPLOAD_URL;
 
   beforeEach(() => {
     delete process.env.S3_MAX_IMAGE_UPLOAD_BYTES;
@@ -78,6 +80,12 @@ describe("S3 helpers", () => {
       delete process.env.S3_KEY_PREFIX;
     } else {
       process.env.S3_KEY_PREFIX = originalKeyPrefix;
+    }
+
+    if (originalPublicUploadUrl === undefined) {
+      delete process.env.S3_PUBLIC_UPLOAD_URL;
+    } else {
+      process.env.S3_PUBLIC_UPLOAD_URL = originalPublicUploadUrl;
     }
   });
 
@@ -247,6 +255,41 @@ describe("S3 helpers", () => {
     const searchParams = new URL(upload.uploadUrl).searchParams;
     expect(searchParams.has("x-amz-checksum-crc32")).toBe(false);
     expect(searchParams.has("x-amz-sdk-checksum-algorithm")).toBe(false);
+  });
+
+  it("toPublicUploadUrl swaps only the origin and keeps the signed path and query", () => {
+    const signed =
+      "http://minio-prod:9006/kaneo-uploads/a%20b.png?X-Amz-Signature=abc&X-Amz-Expires=300";
+
+    expect(toPublicUploadUrl(signed, undefined)).toBe(signed);
+    expect(toPublicUploadUrl(signed, "https://host.example/s3/")).toBe(
+      "https://host.example/s3/kaneo-uploads/a%20b.png?X-Amz-Signature=abc&X-Amz-Expires=300",
+    );
+  });
+
+  it("signs against S3_ENDPOINT but returns the S3_PUBLIC_UPLOAD_URL origin", async () => {
+    process.env.S3_ENDPOINT = "http://minio-prod:9006";
+    process.env.S3_BUCKET = "kaneo-uploads";
+    process.env.S3_ACCESS_KEY_ID = "test-access-key";
+    process.env.S3_SECRET_ACCESS_KEY = "test-secret-key";
+    process.env.S3_FORCE_PATH_STYLE = "true";
+    process.env.S3_PUBLIC_UPLOAD_URL = "https://host.example/s3";
+    delete process.env.S3_KEY_PREFIX;
+
+    const upload = await createTaskImageUploadUrl({
+      workspaceId: "workspace-1",
+      projectId: "project-1",
+      taskId: "task-1",
+      surface: "description",
+      filename: "report.png",
+      contentType: "image/png",
+    });
+
+    const url = new URL(upload.uploadUrl);
+    expect(url.origin).toBe("https://host.example");
+    expect(url.pathname).toBe(`/s3/kaneo-uploads/${upload.key}`);
+    expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe("host");
+    expect(url.searchParams.has("X-Amz-Signature")).toBe(true);
   });
 
   it("resolveS3Credentials returns explicit credentials when both keys are set", () => {
