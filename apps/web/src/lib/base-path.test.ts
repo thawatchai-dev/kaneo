@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { BASE_PATH, stripBasePath, withBasePath } from "./base-path";
 
 // The vitest environment doesn't apply vite.config.ts's `base: "/kaneo/"`

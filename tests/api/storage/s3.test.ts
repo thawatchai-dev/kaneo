@@ -410,12 +410,13 @@ describe("S3 helpers", () => {
       surface: "description",
       filename: "report.png",
       contentType: "image/png",
+      size: 12345,
     });
 
     const url = new URL(upload.uploadUrl);
     expect(url.origin).toBe("https://host.example");
     expect(url.pathname).toBe(`/s3/kaneo-uploads/${upload.key}`);
-    expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe("host");
+    expect(url.searchParams.get("X-Amz-SignedHeaders")).toContain("host");
     expect(url.searchParams.has("X-Amz-Signature")).toBe(true);
   });
 

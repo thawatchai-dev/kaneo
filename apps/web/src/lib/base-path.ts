@@ -66,9 +66,11 @@ export function stripBasePath(path: string): string {
  * Call this exactly once, immediately after `createRouter(...)` in
  * main.tsx — patching an already-patched history is harmless but pointless.
  */
+// `never[]` rest: accepts any concrete push/replace signature (TanStack's
+// carries typed state and navigate options) without resorting to `any`.
 export function patchHistoryForBasePath(history: {
-  push: (path: string, ...rest: unknown[]) => void;
-  replace: (path: string, ...rest: unknown[]) => void;
+  push: (path: string, ...rest: never[]) => void;
+  replace: (path: string, ...rest: never[]) => void;
 }): void {
   const originalPush = history.push.bind(history);
   const originalReplace = history.replace.bind(history);

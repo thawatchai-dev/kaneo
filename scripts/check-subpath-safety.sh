@@ -50,6 +50,10 @@ check \
   'window\.location\.(href\s*=|assign\(|replace\()\s*[`"'"'"']?\$\{[^}]*\}?/?[a-zA-Z]|window\.location\.(assign|replace)\(\s*["'"'"'`]/[a-zA-Z]'
 
 check \
+  "new URL(\"/literal\", window.location.origin) drops the base path (wrap the path in withBasePath()):" \
+  'new URL\(\s*["'"'"'`]/[a-zA-Z][^,]*,\s*window\.location\.origin'
+
+check \
   "raw import.meta.env.BASE_URL usage outside lib/base-path.ts (use withBasePath() instead):" \
   'import\.meta\.env\.BASE_URL'
 
