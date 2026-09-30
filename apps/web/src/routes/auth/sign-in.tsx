@@ -50,6 +50,11 @@ function SignIn() {
   const [isDiscordLoading, setIsDiscordLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const resetCaptcha = useCallback(() => {
+    setTurnstileToken(null);
+    setCaptchaKey((key) => key + 1);
+  }, []);
   const [autoLoginFailed, setAutoLoginFailed] = useState(false);
   const lastLoginMethod = authClient.getLastUsedLoginMethod();
   const { data: config, isLoading: isConfigLoading } = useGetConfig();
@@ -117,13 +122,21 @@ function SignIn() {
   }, [invitationId, getSafeRedirectPath]);
 
   const handleCustomOAuth = useCallback(async () => {
+    if (captchaPending) return;
     setIsCustomOAuthLoading(true);
     try {
-      const result = await authClient.signIn.oauth2({
-        providerId: "custom",
-        callbackURL: getCallbackUrl(),
-        errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
-      });
+      const result = await authClient.signIn.oauth2(
+        {
+          providerId: "custom",
+          callbackURL: getCallbackUrl(),
+          errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
+        },
+        {
+          headers: turnstileToken
+            ? { "x-turnstile-token": turnstileToken }
+            : undefined,
+        },
+      );
       if (result.error) {
         throw new Error(result.error.message);
       }
@@ -134,17 +147,26 @@ function SignIn() {
       setAutoLoginFailed(true);
     } finally {
       setIsCustomOAuthLoading(false);
+      resetCaptcha();
     }
-  }, [getCallbackUrl, t]);
+  }, [getCallbackUrl, t, captchaPending, turnstileToken, resetCaptcha]);
 
   const handleSignInGoogle = async () => {
+    if (captchaPending) return;
     setIsGoogleLoading(true);
     try {
-      const result = await authClient.signIn.social({
-        provider: "google",
-        callbackURL: getCallbackUrl(),
-        errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
-      });
+      const result = await authClient.signIn.social(
+        {
+          provider: "google",
+          callbackURL: getCallbackUrl(),
+          errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
+        },
+        {
+          headers: turnstileToken
+            ? { "x-turnstile-token": turnstileToken }
+            : undefined,
+        },
+      );
       if (result.error) {
         throw new Error(result.error.message);
       }
@@ -154,17 +176,26 @@ function SignIn() {
       );
     } finally {
       setIsGoogleLoading(false);
+      resetCaptcha();
     }
   };
 
   const handleSignInGithub = async () => {
+    if (captchaPending) return;
     setIsGithubLoading(true);
     try {
-      const result = await authClient.signIn.social({
-        provider: "github",
-        callbackURL: getCallbackUrl(),
-        errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
-      });
+      const result = await authClient.signIn.social(
+        {
+          provider: "github",
+          callbackURL: getCallbackUrl(),
+          errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
+        },
+        {
+          headers: turnstileToken
+            ? { "x-turnstile-token": turnstileToken }
+            : undefined,
+        },
+      );
       if (result.error) {
         throw new Error(result.error.message);
       }
@@ -174,17 +205,26 @@ function SignIn() {
       );
     } finally {
       setIsGithubLoading(false);
+      resetCaptcha();
     }
   };
 
   const handleSignInDiscord = async () => {
+    if (captchaPending) return;
     setIsDiscordLoading(true);
     try {
-      const result = await authClient.signIn.social({
-        provider: "discord",
-        callbackURL: getCallbackUrl(),
-        errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
-      });
+      const result = await authClient.signIn.social(
+        {
+          provider: "discord",
+          callbackURL: getCallbackUrl(),
+          errorCallbackURL: `${import.meta.env.VITE_CLIENT_URL}/auth/sign-in`,
+        },
+        {
+          headers: turnstileToken
+            ? { "x-turnstile-token": turnstileToken }
+            : undefined,
+        },
+      );
       if (result.error) {
         throw new Error(result.error.message);
       }
@@ -194,6 +234,7 @@ function SignIn() {
       );
     } finally {
       setIsDiscordLoading(false);
+      resetCaptcha();
     }
   };
 
@@ -212,7 +253,14 @@ function SignIn() {
     if (captchaPending) return;
     setIsGuestLoading(true);
     try {
-      const result = await authClient.signIn.anonymous();
+      const result = await authClient.signIn.anonymous(
+        {},
+        {
+          headers: turnstileToken
+            ? { "x-turnstile-token": turnstileToken }
+            : undefined,
+        },
+      );
       if (result.error) {
         throw new Error(result.error.message);
       }
@@ -224,6 +272,7 @@ function SignIn() {
       );
     } finally {
       setIsGuestLoading(false);
+      resetCaptcha();
     }
   };
 
@@ -235,6 +284,7 @@ function SignIn() {
 
   useEffect(() => {
     if (
+      !captchaConfigured &&
       config?.customOAuthAutoLogin &&
       config?.hasCustomOAuth &&
       !autoLoginTriggered.current &&
@@ -243,7 +293,7 @@ function SignIn() {
       autoLoginTriggered.current = true;
       handleCustomOAuth();
     }
-  }, [config, handleCustomOAuth, search.error]);
+  }, [config, handleCustomOAuth, search.error, captchaConfigured]);
 
   // Treat "no users yet" as still loading so the skeleton stays visible
   // while the useEffect above redirects to /auth/sign-up. Otherwise the
@@ -252,7 +302,10 @@ function SignIn() {
     isConfigLoading ||
     isInstanceStatusLoading ||
     instanceStatus?.hasUsers === false ||
-    (config?.customOAuthAutoLogin && config?.hasCustomOAuth && !autoLoginFailed)
+    (!captchaConfigured &&
+      config?.customOAuthAutoLogin &&
+      config?.hasCustomOAuth &&
+      !autoLoginFailed)
   ) {
     return (
       <>
@@ -279,6 +332,15 @@ function SignIn() {
         }
       >
         <div className="mt-6">
+          {captchaConfigured && TURNSTILE_SITE_KEY && (
+            <Turnstile
+              key={captchaKey}
+              siteKey={TURNSTILE_SITE_KEY}
+              onVerify={handleTurnstileVerify}
+              onExpire={handleTurnstileExpire}
+              onError={handleTurnstileExpire}
+            />
+          )}
           {search.error && (
             <Alert variant="error" className="mb-4">
               <AlertDescription>
@@ -314,7 +376,7 @@ function SignIn() {
                     <Button
                       variant="outline"
                       onClick={handleSignInGoogle}
-                      disabled={isGoogleLoading}
+                      disabled={isGoogleLoading || captchaPending}
                       className={cn(
                         "w-full",
                         lastLoginMethod === "google" && "border-primary/50!",
@@ -349,7 +411,7 @@ function SignIn() {
                     <Button
                       variant="outline"
                       onClick={handleSignInGithub}
-                      disabled={isGithubLoading}
+                      disabled={isGithubLoading || captchaPending}
                       className={cn(
                         "w-full",
                         lastLoginMethod === "github" && "border-primary/50!",
@@ -373,7 +435,7 @@ function SignIn() {
                     <Button
                       variant="outline"
                       onClick={handleSignInDiscord}
-                      disabled={isDiscordLoading}
+                      disabled={isDiscordLoading || captchaPending}
                       className={cn(
                         "w-full",
                         lastLoginMethod === "discord" && "border-primary/50!",
@@ -406,7 +468,7 @@ function SignIn() {
                     <Button
                       variant="outline"
                       onClick={handleCustomOAuth}
-                      disabled={isCustomOAuthLoading}
+                      disabled={isCustomOAuthLoading || captchaPending}
                       className={cn(
                         "w-full",
                         lastLoginMethod === "custom" && "border-primary/50!",
@@ -426,27 +488,17 @@ function SignIn() {
                 )}
 
                 {config?.hasGuestAccess && !invitationId && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={handleGuestAccess}
-                      disabled={isGuestLoading || captchaPending}
-                      className="w-full"
-                    >
-                      <UserCheck className="w-5 h-5 mr-2" />
-                      {isGuestLoading
-                        ? t("auth:signIn.signingIn")
-                        : t("auth:signUp.continueAsGuest")}
-                    </Button>
-                    {captchaConfigured && TURNSTILE_SITE_KEY && (
-                      <Turnstile
-                        siteKey={TURNSTILE_SITE_KEY}
-                        onVerify={handleTurnstileVerify}
-                        onExpire={handleTurnstileExpire}
-                        onError={handleTurnstileExpire}
-                      />
-                    )}
-                  </>
+                  <Button
+                    variant="outline"
+                    onClick={handleGuestAccess}
+                    disabled={isGuestLoading || captchaPending}
+                    className="w-full"
+                  >
+                    <UserCheck className="w-5 h-5 mr-2" />
+                    {isGuestLoading
+                      ? t("auth:signIn.signingIn")
+                      : t("auth:signUp.continueAsGuest")}
+                  </Button>
                 )}
               </div>
 
@@ -467,6 +519,8 @@ function SignIn() {
           {!config?.disableLoginForm &&
             (config?.hasSmtp && !config?.disableEmailOtpSignIn ? (
               <OtpSignInForm
+                turnstileToken={captchaConfigured ? turnstileToken : undefined}
+                onAttemptComplete={resetCaptcha}
                 invitationId={invitationId}
                 defaultEmail={defaultEmail}
                 redirect={getSafeRedirectPath()}
@@ -474,6 +528,7 @@ function SignIn() {
               />
             ) : (
               <SignInForm
+                canResetPassword={config?.hasSmtp}
                 defaultEmail={defaultEmail}
                 onSuccess={handleSignInSuccess}
               />
