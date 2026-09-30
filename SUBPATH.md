@@ -231,7 +231,7 @@ the returned URL is swapped (`toPublicUploadUrl()` in
 `/s3` and set `Host` back to the `S3_ENDPOINT` host, port included.
 
 ```
-S3_ENDPOINT=http://minio-prod:9006
+S3_ENDPOINT=http://minio-prod:9000
 S3_PUBLIC_UPLOAD_URL=https://yourdomain.com/s3
 S3_BUCKET=kaneo-uploads
 S3_ACCESS_KEY_ID=kaneo
@@ -242,8 +242,8 @@ S3_FORCE_PATH_STYLE=true
 
 ```nginx
 location /s3/ {
-    proxy_pass http://127.0.0.1:9006/;
-    proxy_set_header Host minio-prod:9006;   # must equal S3_ENDPOINT's host:port
+    proxy_pass http://127.0.0.1:9006/;       # MinIO's published host port
+    proxy_set_header Host minio-prod:9000;   # must equal S3_ENDPOINT's host:port
     proxy_http_version 1.1;
     proxy_set_header Connection "";
     proxy_buffering off;
@@ -252,9 +252,18 @@ location /s3/ {
 }
 ```
 
+The `Host` nginx sends and the host:port in `S3_ENDPOINT` must match
+character for character, port included, or every upload fails with
+`403 SignatureDoesNotMatch`. The `proxy_pass` port is irrelevant to the
+signature: here nginx reaches MinIO on its published host port (9006) while
+both sides name it by container name and internal port (`minio-prod:9000`).
+Mixing the two (nginx `minio-prod:9000`, env `minio-prod:9006`) is the
+mistake this setup hit in production.
+
 `S3_ENDPOINT` must also be reachable from the API container, because the
-API reads and deletes objects through it. If `minio-prod` doesn't resolve
-there, use the IP and change the nginx `Host` to match. No CORS is needed:
+API reads and deletes objects through it, so Kaneo and MinIO need to share a
+Docker network for `minio-prod:9000` to resolve. If they can't, use the
+host IP and published port (`10.204.16.36:9006`) in both places instead. No CORS is needed:
 `/s3/` is the same origin as Kaneo. Unset `S3_PUBLIC_UPLOAD_URL` and
 upstream behaviour is unchanged.
 
