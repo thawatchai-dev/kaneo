@@ -70,7 +70,7 @@ agree with that split.
     string you're constructing (share links, redirects) rather than
     navigating with. Used in `lib/http-error.ts`,
     `hooks/mutations/use-sign-out.ts`, `lib/invitation-link.ts`,
-    `components/nav-projects.tsx`,
+    `lib/generate-link.ts`, `components/nav-projects.tsx`,
     `components/task/task-properties-sidebar.tsx`, and
     `routes/.../visibility.tsx`.
   - `patchHistoryForBasePath(router.history)` — called once in

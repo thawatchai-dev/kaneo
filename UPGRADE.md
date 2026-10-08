@@ -26,7 +26,11 @@ cheaper, so upgrade often.
       does not undo them.
 - [ ] Read the upstream migrations between your version and the target
       (`git diff <old-tag> <new-tag> --stat -- apps/api/drizzle`) and check
-      the data they touch. Last upgrade (v2.24 → v2.29) needed:
+      the data they touch. In v2.29 → v2.35 (6 migrations: 0055-0060):
+      - `0056` adds `data_migration` table.
+      - `0057` adds `storage_cleanup` table and triggers on `asset` & `project` deletion.
+      - `0060` adds `workspace_member_access` and `workspace_member_project` tables for restricting members to selected projects.
+      Prior jump (v2.24 → v2.29) needed:
       - `0047` deletes API keys with no owner — list them first:
         ```sql
         SELECT id FROM apikey a WHERE reference_id IS NULL
@@ -53,16 +57,16 @@ working tree:
 ```bash
 git merge-tree --write-tree --name-only HEAD vX.Y.Z | grep CONFLICT
 ```
-Files that conflicted in the v2.24 → v2.29 merge, and how each was resolved:
+Files that conflicted in the v2.29 → v2.35 merge, and how each was resolved:
 
 | File | Resolution |
 |---|---|
-| `apps/web/env.sh`, `apps/web/env.awk` | Take upstream's; **keep `KANEO_WS_URL` in `env.awk`** (in both the `values[...]` list and the placeholder regex). Upstream only knows 3 variables; without it the WS override silently stops working. |
-| `apps/web/src/env.test.ts` | Take upstream's; keep the `KANEO_WS_URL` test. |
-| `apps/web/vite.config.ts` | Keep `base: "/kaneo/"`, take upstream's plugin wiring. |
-| `apps/web/public/site.webmanifest` | Keep relative icon paths (no leading `/`). |
-| `apps/web/src/hooks/use-{project,user}-websocket.ts` | Take upstream's hook body; keep importing `getWsUrl` / `getUserWsUrl` from `@/fetchers/get-ws-url`. |
-| `apps/api/src/storage/s3.ts`, `tests/api/storage/s3.test.ts` | Keep both sides (see the S3 check below). |
+| `apps/web/src/hooks/use-{project,user}-websocket.ts` | Take upstream's hook body & new imports; keep importing `getWsUrl` / `getUserWsUrl` from `@/fetchers/get-ws-url`. |
+| `apps/web/src/hooks/mutations/use-sign-out.ts` | Take upstream's `descriptionSaveQueue.clear()`; keep `withBasePath("auth/sign-in")`. |
+| `apps/web/src/components/task/task-properties-sidebar.tsx` | Adopt upstream's `generateLink(getTaskPath(...))` and `useTaskCopyShortcuts`. |
+
+Silent breakage fixed in v2.35:
+- Upstream introduced `apps/web/src/lib/generate-link.ts` returning `${baseUrl}${path}`, which lacked the subpath prefix when copying task links. Wrapped `path` with `withBasePath(path)` in `generate-link.ts`.
 
 Other fork-touched files that usually merge cleanly but are worth a look:
 ```
@@ -70,10 +74,9 @@ apps/web/src/main.tsx
 apps/web/src/lib/auth-client.ts
 apps/web/src/lib/http-error.ts
 apps/web/src/lib/invitation-link.ts
+apps/web/src/lib/generate-link.ts
 apps/web/src/components/common/logo.tsx
 apps/web/src/components/nav-projects.tsx
-apps/web/src/components/task/task-properties-sidebar.tsx
-apps/web/src/hooks/mutations/use-sign-out.ts
 apps/web/src/routes/auth/sign-in.tsx
 apps/web/src/routes/auth/verify-otp.tsx
 apps/web/src/routes/_layout/_authenticated/dashboard/settings/projects/$projectId/visibility.tsx
@@ -83,16 +86,12 @@ Resolve in favor of **keeping this fork's line intact**, merged around
 whatever upstream changed nearby — read the conflict context rather than
 blindly taking "ours" or "theirs" wholesale.
 
-**A clean merge is not proof it is correct.** Two upstream additions in the
-last upgrade merged without conflict and were still broken for this fork:
-- A new upload flow signed a URL with the internal `S3_ENDPOINT` and
-  returned it as-is, bypassing `toPublicUploadUrl()`. After every merge:
+**A clean merge is not proof it is correct.** Always verify:
+- Upload flows: make sure every `getSignedUrl` in `apps/api/src/storage/s3.ts` is passed through `toPublicUploadUrl()`:
   ```bash
   grep -n "getSignedUrl" apps/api/src/storage/s3.ts
   ```
-  and make sure each result is passed through `toPublicUploadUrl()`.
-- A new page built a link with `new URL("/auth/...", window.location.origin)`,
-  dropping `/kaneo`. Step 2's script now flags this pattern.
+- Link generation: check `scripts/check-subpath-safety.sh` to ensure no raw `window.location.origin` or absolute link construction bypasses `withBasePath(...)`.
 
 ## 2. Run the safety checks
 
