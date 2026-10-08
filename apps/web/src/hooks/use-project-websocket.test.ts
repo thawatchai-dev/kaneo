@@ -15,8 +15,17 @@ vi.mock("@kaneo/libs", () => ({
 import { getWsUrl, useProjectWebSocket } from "./use-project-websocket";
 
 const invalidateQueries = vi.fn();
+const getQueryState = vi.fn();
+const cancelQueries = vi.fn().mockResolvedValue(undefined);
 vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({ invalidateQueries }),
+  useQueryClient: () => ({
+    invalidateQueries,
+    getQueryCache: () => ({ subscribe: () => () => {}, findAll: () => [] }),
+    getQueryState,
+    getQueryData: () => undefined,
+    getQueriesData: () => [],
+    cancelQueries,
+  }),
 }));
 vi.mock("@/lib/auth-client", () => ({
   authClient: { useSession: () => ({ data: { user: { id: "user-1" } } }) },
