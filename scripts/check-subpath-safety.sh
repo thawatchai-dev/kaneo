@@ -57,6 +57,10 @@ check \
   "raw import.meta.env.BASE_URL usage outside lib/base-path.ts (use withBasePath() instead):" \
   'import\.meta\.env\.BASE_URL'
 
+check \
+  "hardcoded public asset path in src attribute (wrap in withBasePath()):" \
+  'src=["'"'"']/(favicon|images|logo)'
+
 if [ "$FAIL" -eq 0 ]; then
   echo "✅ No unsafe hardcoded-path patterns found."
 fi

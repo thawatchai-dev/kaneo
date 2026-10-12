@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { withBasePath } from "@/lib/base-path";
 import { AuthLegalFooter } from "./auth-legal-footer";
 
 type AuthPageProps = {
@@ -21,7 +22,7 @@ export function AuthPage({
           <div className="flex w-full max-w-[360px] flex-col">
             <div className="flex flex-col gap-5 pb-8">
               <img
-                src="/favicon.svg"
+                src={withBasePath("favicon.svg")}
                 alt=""
                 className="size-10 shrink-0 rounded-lg border border-border"
               />

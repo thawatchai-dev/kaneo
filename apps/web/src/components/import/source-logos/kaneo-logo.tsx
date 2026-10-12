@@ -1,10 +1,11 @@
 import type { SourceLogoProps } from "@/components/import/source-logos/source-logo-size";
+import { withBasePath } from "@/lib/base-path";
 import { cn } from "@/lib/cn";
 
 export function KaneoLogo({ size }: SourceLogoProps) {
   return (
     <img
-      src="/favicon.svg"
+      src={withBasePath("favicon.svg")}
       alt=""
       aria-hidden="true"
       draggable={false}
