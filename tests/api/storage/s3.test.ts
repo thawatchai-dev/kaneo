@@ -28,6 +28,7 @@ import {
   toPublicUploadUrl,
   validateProjectBackgroundUploadInput,
   validateTaskAssetUploadInput,
+  verifyTaskAssetUpload,
 } from "../../../apps/api/src/storage/s3";
 
 describe("S3 helpers", () => {
@@ -440,6 +441,71 @@ describe("S3 helpers", () => {
     expect(url.origin).toBe("https://host.example");
     expect(url.pathname).toBe(`/s3/kaneo-uploads/${upload.key}`);
     expect(url.searchParams.has("X-Amz-Signature")).toBe(true);
+  });
+
+  it("logs a safe summary when an uploaded object cannot be verified", async () => {
+    process.env.S3_ENDPOINT = "https://storage.example.test";
+    process.env.S3_BUCKET = "kaneo";
+    process.env.S3_ACCESS_KEY_ID = "test-access-key";
+    process.env.S3_SECRET_ACCESS_KEY = "test-secret-key";
+
+    vi.spyOn(S3Client.prototype, "send").mockRejectedValue(
+      Object.assign(
+        new Error("https://storage.example.test/kaneo?X-Amz-Signature=x"),
+        { name: "InternalError", $metadata: { httpStatusCode: 500 } },
+      ) as never,
+    );
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      verifyTaskAssetUpload("workspace/w1/project/p1/task/t1/a.png", {
+        size: 12,
+        contentType: "image/png",
+      }),
+    ).rejects.toThrow("Unable to verify uploaded object.");
+
+    expect(log).toHaveBeenCalledWith("Unable to verify uploaded object:", {
+      name: "InternalError",
+      status: 500,
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("X-Amz-Signature");
+  });
+
+  it("accepts an upload that storage refuses for a moment after the PUT", async () => {
+    process.env.S3_ENDPOINT = "https://storage.example.test";
+    process.env.S3_BUCKET = "kaneo";
+    process.env.S3_ACCESS_KEY_ID = "test-access-key";
+    process.env.S3_SECRET_ACCESS_KEY = "test-secret-key";
+
+    const send = vi
+      .spyOn(S3Client.prototype, "send")
+      .mockRejectedValueOnce(
+        Object.assign(new Error("UnknownError"), {
+          name: "Unknown",
+          $metadata: { httpStatusCode: 403 },
+        }) as never,
+      )
+      .mockResolvedValue({
+        ContentLength: 12,
+        ContentType: "image/png",
+      } as never);
+
+    vi.useFakeTimers();
+    try {
+      const verified = verifyTaskAssetUpload(
+        "workspace/w1/project/p1/task/t1/a.png",
+        { size: 12, contentType: "image/png" },
+      );
+      await vi.runAllTimersAsync();
+
+      await expect(verified).resolves.toEqual({
+        size: 12,
+        contentType: "image/png",
+      });
+      expect(send).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("copies a stored object into the destination task prefix", async () => {
