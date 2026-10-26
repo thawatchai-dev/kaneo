@@ -98,10 +98,7 @@ type SlashMenuState = {
 };
 
 function formatMarkdown(markdown: string) {
-  return markdown
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/\n{2,}$/g, "\n");
+  return markdown.replace(/\r\n/g, "\n");
 }
 
 function resetUndoHistory(editor: Editor) {
@@ -489,7 +486,7 @@ export default function TaskDescription({ taskId }: TaskDescriptionProps) {
           }
 
           const plainText = event.clipboardData?.getData("text/plain") || "";
-          if (editor && pasteMarkdown(editor, event)) return true;
+          if (pasteMarkdown(view, event)) return true;
 
           const pastedText = plainText.trim();
           if (!pastedText || /\s/.test(pastedText)) return false;
