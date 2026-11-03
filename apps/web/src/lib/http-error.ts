@@ -62,7 +62,11 @@ export function isUnauthorizedError(error: unknown): boolean {
 // current pathname/search/hash so the sign-in page can return the user to
 // where they were instead of dropping them on /dashboard.
 export function handleUnauthorized(): void {
-  if (signOutState.isRedirecting) return;
+  if (
+    signOutState.isRedirecting ||
+    stripBasePath(window.location.pathname).startsWith("/auth/")
+  )
+    return;
   // window.location.pathname carries the base path (unlike TanStack
   // Router's own parsed location); strip it so `redirect` is always
   // app-relative, matching what the sign-in page hands to `navigate({ to })`.

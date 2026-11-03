@@ -899,6 +899,15 @@
 						},
 						"continueWithEmail": {
 							"type": "string"
+						},
+						"captchaChecking": {
+							"type": "string"
+						},
+						"captchaFailed": {
+							"type": "string"
+						},
+						"captchaRetry": {
+							"type": "string"
 						}
 					},
 					"required": [
@@ -916,7 +925,10 @@
 						"passwordRequired",
 						"passwordTooShort",
 						"disposableEmail",
-						"continueWithEmail"
+						"continueWithEmail",
+						"captchaChecking",
+						"captchaFailed",
+						"captchaRetry"
 					]
 				},
 				"checkEmail": {
@@ -10380,9 +10392,6 @@
 					"type": "object",
 					"additionalProperties": false,
 					"properties": {
-						"projectsTitle": {
-							"type": "string"
-						},
 						"settingsTitle": {
 							"type": "string"
 						},
@@ -10394,7 +10403,6 @@
 						}
 					},
 					"required": [
-						"projectsTitle",
 						"settingsTitle",
 						"backToWorkspace",
 						"settingsWorkspaceTab"
@@ -13041,9 +13049,29 @@
 						},
 						"noTasks": {
 							"type": "string"
+						},
+						"expandSubtasks": {
+							"type": "string"
+						},
+						"collapseSubtasks": {
+							"type": "string"
+						},
+						"subtaskLevel": {
+							"type": "string"
+						},
+						"subtasksLoadError": {
+							"type": "string"
 						}
 					},
-					"required": ["addTask", "archiveAllTooltip", "noTasks"]
+					"required": [
+						"addTask",
+						"archiveAllTooltip",
+						"noTasks",
+						"expandSubtasks",
+						"collapseSubtasks",
+						"subtaskLevel",
+						"subtasksLoadError"
+					]
 				},
 				"kanban": {
 					"type": "object",
@@ -13635,9 +13663,27 @@
 					"properties": {
 						"reorderFailed": {
 							"type": "string"
+						},
+						"loadErrorTitle": {
+							"type": "string"
+						},
+						"loadErrorDescription": {
+							"type": "string"
+						},
+						"refreshError": {
+							"type": "string"
+						},
+						"tryAgain": {
+							"type": "string"
 						}
 					},
-					"required": ["reorderFailed"]
+					"required": [
+						"reorderFailed",
+						"loadErrorTitle",
+						"loadErrorDescription",
+						"refreshError",
+						"tryAgain"
+					]
 				}
 			},
 			"required": [
@@ -14985,7 +15031,7 @@
 						"cloudCta": {
 							"type": "string"
 						},
-						"selfHostCta": {
+						"pricingCta": {
 							"type": "string"
 						},
 						"trialNote": {
@@ -15009,7 +15055,7 @@
 					},
 					"required": [
 						"cloudCta",
-						"selfHostCta",
+						"pricingCta",
 						"trialNote",
 						"github",
 						"productHunt",
@@ -15349,7 +15395,7 @@
 						"description": {
 							"type": "string"
 						},
-						"docker": {
+						"startups": {
 							"type": "object",
 							"additionalProperties": false,
 							"properties": {
@@ -15406,7 +15452,7 @@
 						"eyebrow",
 						"title",
 						"description",
-						"docker",
+						"startups",
 						"sso",
 						"mcp",
 						"linear"
