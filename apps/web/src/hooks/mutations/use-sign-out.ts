@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { replayAuthEntrance } from "@/components/auth/auth-entrance";
 import { replayShellEntrance } from "@/components/common/shell-entered";
@@ -11,6 +11,7 @@ import { signOutState } from "@/lib/sign-out-state";
 
 function useSignOut(idpLogoutUrl?: string | null) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: session } = authClient.useSession();
 
   return useMutation({
@@ -49,6 +50,13 @@ function useSignOut(idpLogoutUrl?: string | null) {
           throw new Error(result.error.message);
         }
         descriptionSaveQueue.clear();
+        // Drop the signed-out user's data before leaving the app, but keep the
+        // instance config and status that the auth pages reuse.
+        queryClient.removeQueries({
+          predicate: ({ queryKey }) =>
+            queryKey[0] !== "config" && queryKey[0] !== "instance-status",
+        });
+        queryClient.getMutationCache().clear();
         if (url) window.location.href = url.toString();
         else signOutState.isRedirecting = false;
         return result.data;
